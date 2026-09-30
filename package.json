@@ -1,0 +1,15 @@
+{
+  "name": "opencode-auto-vision",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Automatic image analysis for OpenCode with sequential local Ollama models.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test",
+    "setup": "node bin/setup.mjs install",
+    "uninstall-plugin": "node bin/setup.mjs uninstall",
+    "check": "node --check src/plugin.mjs && node --check bin/setup.mjs"
+  }
+}
