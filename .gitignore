@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+*.jsonl
+coverage/
+.DS_Store
+opencode-auto-vision.local.json
