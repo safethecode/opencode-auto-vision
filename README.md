@@ -1,18 +1,20 @@
 # opencode-auto-vision
 
-Automatic image analysis for OpenCode with local Ollama models. Sequentially swaps vision and coding models to reduce simultaneous VRAM usage, handling image attachments and MCP image responses without manual tool calls.
+Automatic image handling for OpenCode with local Ollama models. Preserves original image attachments for a model configured with native image input, and sequentially swaps vision and text coding models when image summaries are needed.
 
 **Experimental, local-first integration.** Tested with OpenCode 1.18.33, Ollama 0.34.4, Node 24, Qwen3.5 9B and Qwen3-Coder 30B on Windows. It uses OpenCode's experimental message transform hook, which may change between releases. This is an independent community project.
 
 ## How it works
 
-1. Intercept image attachments immediately before OpenCode sends messages to the coding model.
-2. Unload configured coding models from Ollama.
-3. Ask the local vision model to describe the images.
+1. Read the latest user message's selected provider/model and query OpenCode's resolved provider capabilities for each outgoing request.
+2. If that model explicitly supports image input, preserve the outgoing messages and attachments without running the secondary vision model.
+3. Otherwise, unload configured coding models from Ollama and ask the local vision model to describe the images.
 4. Unload the vision model and replace the images with textual observations in the outgoing message copy.
 5. OpenCode's next coding request reloads the coding model and continues the task.
 
 Original attachments remain in OpenCode's conversation storage. No additional vision tool call is required from the coding model. Skills that return images through ordinary tools benefit from the same conversion; arbitrary skill formats are not guaranteed.
+
+Native image support must be declared in the selected OpenCode model's `modalities.input`, including `"image"`, and supported by its actual backend. The plugin uses the resolved `capabilities.input.image` flag, not a model-name guess or the global default. An unavailable capability lookup keeps the existing summary fallback. Native passthrough does not fetch URL-only tool output: the reference tool must return an actual image attachment or the agent must retrieve it before claiming to have inspected it.
 
 Supported inputs:
 
@@ -215,7 +217,7 @@ If you previously installed the prototype `plugins/auto-vision.js`, move that fi
 ## Limitations and privacy
 
 - Model switching and prompt processing can take tens of seconds or minutes. Run one coding session at a time: requests are queued inside one bridge instance, not locked across OpenCode processes or other Ollama clients.
-- The plugin currently transforms images even if the active coding model supports native vision. Set `enabled` to `false` when using native vision.
+- Native passthrough preserves image attachments; it does not prove that a backend actually uses them correctly. Test the selected model with visible details absent from the prompt. URL-only references still require image retrieval on this path.
 - Descriptions are lossy. OCR, colors, alignment and dimensions can be wrong. This does not improve the coding model's general instruction following.
 - Analysis failures become explicit text notices. SVG, GIF, authenticated image URLs, arbitrary webpage URLs and arbitrary MCP resource formats are not supported.
 - Analysis results are cached by source hash in memory (up to 100 entries per transformer). Changed content at the same URL can remain stale until restart. No additional image cache or analysis logs are written by this release; OpenCode has its own conversation storage.

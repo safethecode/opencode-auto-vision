@@ -27,3 +27,21 @@ test('UIBowl screenshot links are analyzed without an explicit vision tool call'
  await transform(messages);
  assert.match(messages[0].parts[0].state.output,/observed https:/);
 });
+
+test('native image support preserves attachments and tool output without secondary inference',async()=>{
+ let calls=0;
+ const transform=createTransformer(async()=>{calls++;return 'summary';},{supportsImages:async()=>true});
+ const messages=[{parts:[{type:'file',mime:'image/png',url:'data:image/png;base64,aA=='},{type:'tool',tool:'uibowl_search',state:{status:'completed',output:'{"screenshot_url":"https://cdn.example.org/screen.png"}',attachments:[{type:'file',mime:'image/png',url:'data:image/png;base64,aA=='}]}}]}];
+ const before=structuredClone(messages);
+ await transform(messages);
+ assert.deepEqual(messages,before);
+ assert.equal(calls,0);
+});
+
+test('native capability lookup failure retains the explicit text fallback',async()=>{
+ const transform=createTransformer(async()=> 'fallback',{supportsImages:async()=>{throw new Error('lookup failed');}});
+ const messages=[{parts:[{type:'file',mime:'image/png',url:'data:image/png;base64,aA=='}]}];
+ await transform(messages);
+ assert.equal(messages[0].parts[0].type,'text');
+ assert.match(messages[0].parts[0].text,/fallback/);
+});

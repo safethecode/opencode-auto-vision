@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 const marker='[Automatic local image analysis';
 
-export function createTransformer(inspect, {imageToolPrefixes=['uibowl_']}={}) {
+export function createTransformer(inspect, {imageToolPrefixes=['uibowl_'],supportsImages=async()=>false}={}) {
  const cache=new Map();
  async function describe(source) {
    const key=createHash('sha256').update(source).digest('hex');
@@ -14,6 +14,7 @@ export function createTransformer(inspect, {imageToolPrefixes=['uibowl_']}={}) {
    } catch(error) {return `${marker} failed: ${error.message}. Do not claim to have seen this image.]`;}
  }
  return async messages=>{
+   try {if(await supportsImages(messages)===true) return;} catch {}
    for(const message of messages) {
      for(let i=0;i<message.parts.length;i++) {
        const part=message.parts[i];
